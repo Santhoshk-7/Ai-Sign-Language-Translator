@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SignLens — AI Sign Language Translator</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500&family=Syne:wght@700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  font-family:'Outfit',sans-serif;
+  background:linear-gradient(155deg,#EDE8FF 0%,#F3F0FF 50%,#E6DEFF 100%);
+  color:#1A1535;
+}
+
+/* orbs */
+.o{position:fixed;border-radius:50%;filter:blur(72px);pointer-events:none;z-index:0;}
+.o1{width:420px;height:420px;top:-120px;left:-80px;
+    background:radial-gradient(circle,rgba(160,130,255,.32)0%,transparent 70%);
+    animation:d1 22s ease-in-out infinite;}
+.o2{width:340px;height:340px;bottom:-80px;right:-60px;
+    background:radial-gradient(circle,rgba(100,60,210,.18)0%,transparent 70%);
+    animation:d2 28s ease-in-out infinite;}
+@keyframes d1{0%,100%{transform:translate(0,0)}50%{transform:translate(45px,30px)}}
+@keyframes d2{0%,100%{transform:translate(0,0)}50%{transform:translate(-35px,-45px)}}
+
+/* nav */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 40px;
+  animation:fu .7s ease both;
+}
+.logo{display:flex;align-items:center;gap:8px;font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;color:#1A1535;}
+.logo-box{
+  width:28px;height:28px;border-radius:7px;
+  background:linear-gradient(135deg,#3A1FA8,#7B5CF0);
+  display:flex;align-items:center;justify-content:center;font-size:.78rem;
+  box-shadow:0 3px 12px rgba(91,61,208,.38);
+}
+
+/* HERO */
+.hero{
+  position:fixed;inset:0;z-index:10;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:56px 20px 16px;
+  gap:0;overflow:hidden;
+}
+
+/* icon */
+.icon-wrap{
+  position:relative;flex-shrink:0;
+  width:clamp(88px,11vmin,132px);
+  height:clamp(88px,11vmin,132px);
+  margin-bottom:clamp(14px,2.5vmin,28px);
+  animation:float 6s ease-in-out infinite, fu .8s ease .2s both;
+}
+.icon-glow{
+  position:absolute;inset:-20px;border-radius:50%;
+  background:radial-gradient(circle,rgba(123,92,240,.25)0%,transparent 70%);
+  animation:pg 4s ease-in-out infinite;
+}
+@keyframes pg{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.18);opacity:1}}
+.icon-ring{
+  position:absolute;inset:-12px;border-radius:50%;
+  border:1px solid rgba(167,139,250,.28);
+  animation:sr 18s linear infinite;
+}
+.icon-ring::before{
+  content:'';position:absolute;top:-3px;left:50%;transform:translateX(-50%);
+  width:5px;height:5px;border-radius:50%;background:#7B5CF0;
+  box-shadow:0 0 10px 3px rgba(123,92,240,.55);
+}
+@keyframes sr{to{transform:rotate(360deg)}}
+
+.icon-card{
+  position:relative;z-index:2;width:100%;height:100%;
+  border-radius:clamp(22px,4vmin,38px);
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(145deg,rgba(255,255,255,.78)0%,rgba(230,220,255,.58)40%,rgba(210,194,255,.42)100%);
+  border:1px solid rgba(255,255,255,.88);
+  box-shadow:0 0 0 1px rgba(167,139,250,.20),0 6px 26px rgba(91,61,208,.15),0 2px 0 rgba(255,255,255,.9) inset;
+  transform:perspective(400px) rotateX(5deg) rotateY(-5deg);
+  transition:transform .5s ease;
+  overflow:hidden;
+}
+.icon-card:hover{transform:perspective(400px) rotateX(-2deg) rotateY(5deg) scale(1.04)}
+
+/* top gloss line */
+.icon-card::before{
+  content:'';position:absolute;top:0;left:20%;right:20%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent);
+  z-index:4;
+}
+
+/* ── FROSTED-GLASS SANTHOSH WATERMARK ────────────────────────
+   Sits at the bottom inner edge of the card.
+   Two-pass trick:
+     • base color at 5% opacity → always present, barely visible
+     • background-clip:text gradient sweeps through every ~8 s →
+       simulates angled light catching the surface etching
+──────────────────────────────────────────────────────────── */
+.icon-card::after{
+  content:'Santhosh';
+  position:absolute;
+  bottom:10%;
+  left:50%;
+  transform:translateX(-50%);
+  white-space:nowrap;
+
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(.42rem,.72vmin,.58rem);
+  font-weight:600;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+
+  /* 5% base opacity — the "always-there" frosted etching */
+  color:rgba(255,255,255,.05);
+
+  /* Fine engraved border illusion */
+  -webkit-text-stroke:.3px rgba(200,185,255,.06);
+
+  /* Specular light-sweep overlay painted onto the text */
+  background:linear-gradient(
+    108deg,
+    rgba(255,255,255,0)      25%,
+    rgba(255,255,255,.42)    46%,
+    rgba(190,165,255,.22)    52%,
+    rgba(255,255,255,0)      68%
+  );
+  -webkit-background-clip:text;
+  background-clip:text;
+  background-size:280% 100%;
+  background-position:220% center;   /* parked off to the right */
+
+  animation:wm-sweep 8s ease-in-out 3s infinite;
+
+  pointer-events:none;
+  user-select:none;
+  z-index:5;
+}
+
+/* The sweep: light enters from the right, crosses the text, exits left */
+@keyframes wm-sweep{
+  0%,100% {
+    background-position: 220% center;
+    color: rgba(255,255,255,.05);
+  }
+  /* light approaching */
+  38% {
+    background-position: 220% center;
+    color: rgba(255,255,255,.05);
+  }
+  /* peak — surface glints, text brightens to ~9% */
+  52% {
+    background-position: -30% center;
+    color: rgba(255,255,255,.09);
+  }
+  /* fades back */
+  66% {
+    background-position:-160% center;
+    color: rgba(255,255,255,.05);
+  }
+}
+
+.icon-emoji{font-size:clamp(2.4rem,5vmin,4rem);line-height:1;filter:drop-shadow(0 5px 16px rgba(91,61,208,.28));}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+
+/* text */
+.eyebrow{
+  flex-shrink:0;
+  font-size:clamp(.52rem,1.1vw,.65rem);font-weight:500;letter-spacing:.20em;text-transform:uppercase;
+  color:#7B5CF0;
+  margin-bottom:clamp(8px,1.5vmin,16px);
+  display:flex;align-items:center;gap:8px;
+  opacity:0;animation:fu .7s ease .5s forwards;
+}
+.eyebrow::before,.eyebrow::after{content:'';width:24px;height:1px;background:linear-gradient(90deg,transparent,#7B5CF0);}
+.eyebrow::after{background:linear-gradient(90deg,#7B5CF0,transparent);}
+
+.h1{
+  flex-shrink:0;
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(2rem,5.5vw,4.6rem);
+  font-weight:300;line-height:1.04;letter-spacing:-.02em;
+  color:#1A1535;
+  opacity:0;animation:fu .8s ease .65s forwards;
+}
+.h1 em{font-style:italic;font-weight:600;color:#7B5CF0;position:relative;}
+.h1 em::after{
+  content:'';position:absolute;bottom:1px;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,#7B5CF0,#5B3DD0);border-radius:2px;
+  transform:scaleX(0);transform-origin:left;
+  animation:lr .8s ease 1.6s forwards;
+}
+@keyframes lr{to{transform:scaleX(1)}}
+.h2{
+  flex-shrink:0;
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(2rem,5.5vw,4.6rem);
+  font-weight:300;line-height:1.04;letter-spacing:-.02em;
+  color:#1A1535;
+  opacity:0;animation:fu .8s ease .78s forwards;
+}
+
+.sub{
+  flex-shrink:0;
+  margin-top:clamp(10px,1.8vmin,20px);
+  font-size:clamp(.74rem,1.3vw,.94rem);font-weight:300;
+  color:#8878B8;line-height:1.55;max-width:400px;
+  opacity:0;animation:fu .8s ease .9s forwards;
+}
+
+/* CTA */
+.cta-wrap{
+  flex-shrink:0;
+  margin-top:clamp(16px,2.8vmin,32px);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  opacity:0;animation:fu .8s ease 1.05s forwards;
+  position:relative;
+}
+.cta{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:clamp(11px,1.8vmin,15px) clamp(26px,3.5vw,36px);
+  background:linear-gradient(135deg,#3A1FA8 0%,#7B5CF0 100%);
+  color:#fff;border:none;border-radius:60px;
+  font-family:'Outfit',sans-serif;
+  font-size:clamp(.76rem,1.3vw,.9rem);font-weight:500;letter-spacing:.04em;
+  cursor:pointer;text-decoration:none;position:relative;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(91,61,208,.5),0 8px 28px rgba(91,61,208,.46),0 18px 50px rgba(91,61,208,.24);
+  transform:translateY(-2px) scale(1.015);
+  transition:transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .22s;
+}
+.cta::before{
+  content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);
+  transform:skewX(-20deg);
+  animation:shine 3.5s ease 2s infinite;
+}
+@keyframes shine{0%,100%{left:-100%}40%,60%{left:160%}}
+.arr{
+  width:16px;height:16px;border:1.5px solid rgba(255,255,255,.6);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.6rem;transition:transform .2s,border-color .2s;
+}
+
+/* pills */
+.pills{
+  flex-shrink:0;
+  margin-top:clamp(12px,2vmin,22px);
+  display:flex;align-items:center;flex-wrap:wrap;justify-content:center;gap:7px;
+  opacity:0;animation:fu .8s ease 1.2s forwards;
+}
+.pill{
+  display:flex;align-items:center;gap:5px;
+  font-size:clamp(.5rem,.9vw,.6rem);font-weight:400;letter-spacing:.06em;
+  color:#8878B8;
+  background:rgba(255,255,255,.64);
+  border:1px solid rgba(167,139,250,.22);
+  border-radius:20px;padding:5px 11px;
+}
+.pd{width:4px;height:4px;border-radius:50%;background:#7B5CF0;flex-shrink:0;}
+
+/* ── MAGNETIC CURSOR ── */
+html,body{ cursor:none; }
+#cur-outer{
+  position:fixed;z-index:9999;pointer-events:none;
+  width:36px;height:36px;border-radius:50%;
+  border:1.5px solid rgba(123,92,240,.55);
+  transform:translate(-50%,-50%);
+  transition:width .3s ease,height .3s ease,border-color .3s ease,background .3s ease,opacity .3s ease;
+  will-change:transform;
+}
+#cur-inner{
+  position:fixed;z-index:10000;pointer-events:none;
+  width:6px;height:6px;border-radius:50%;
+  background:#7B5CF0;
+  transform:translate(-50%,-50%);
+  transition:width .2s ease,height .2s ease,opacity .2s ease;
+  will-change:transform;
+}
+#cur-outer.hovering{width:56px;height:56px;background:rgba(123,92,240,.10);border-color:rgba(123,92,240,.8);}
+#cur-outer.clicking{width:28px;height:28px;background:rgba(123,92,240,.22);}
+#cur-inner.hovering{ width:4px;height:4px; }
+
+@keyframes fu{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div id="cur-outer"></div>
+<div id="cur-inner"></div>
+
+<div class="o o1"></div>
+<div class="o o2"></div>
+
+<nav>
+  <div class="logo">
+    <div class="logo-box">✋</div>
+    SignLens
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="icon-wrap">
+    <div class="icon-glow"></div>
+    <div class="icon-ring"></div>
+    <div class="icon-card"><span class="icon-emoji">✌️</span></div>
+  </div>
+
+  <p class="eyebrow">AI-Powered · Real-Time · Open</p>
+  <h1 class="h1">Breaking <em>Barriers</em></h1>
+  <h1 class="h2">with Artificial Intelligence</h1>
+
+  <p class="sub">SignLens translates American Sign Language into text in real time — powered by computer vision and a custom ML model.</p>
+
+  <div class="cta-wrap">
+    <a href="/translator" class="cta" id="ctaBtn">
+      Enter Translator <span class="arr">›</span>
+    </a>
+    <span style="font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;color:#8878B8;">No installation required</span>
+  </div>
+
+  <div class="pills">
+    <div class="pill"><span class="pd"></span>26 ASL Letters</div>
+    <div class="pill"><span class="pd"></span>30+ FPS</div>
+    <div class="pill"><span class="pd"></span>Zero Cloud</div>
+    <div class="pill"><span class="pd"></span>Open Source</div>
+  </div>
+</section>
+
+<script>
+'use strict';
+
+/* ── Magnetic cursor ── */
+const outer = document.getElementById('cur-outer');
+const inner = document.getElementById('cur-inner');
+
+let ox = -100, oy = -100;
+let mx = -100, my = -100;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  inner.style.left = mx + 'px';
+  inner.style.top  = my + 'px';
+});
+
+(function lerp(){
+  ox += (mx - ox) * 0.10;
+  oy += (my - oy) * 0.10;
+  outer.style.left = ox + 'px';
+  outer.style.top  = oy + 'px';
+  requestAnimationFrame(lerp);
+})();
+
+const MAGNETIC = ['#ctaBtn', '.logo-box', '.pill', '.icon-card'];
+let magnetEl = null;
+
+MAGNETIC.forEach(sel => {
+  document.querySelectorAll(sel).forEach(el => {
+    el.style.transition = el.style.transition
+      ? el.style.transition + ',transform .4s cubic-bezier(.23,1,.32,1)'
+      : 'transform .4s cubic-bezier(.23,1,.32,1)';
+
+    el.addEventListener('mouseenter', () => {
+      magnetEl = el;
+      outer.classList.add('hovering');
+      inner.classList.add('hovering');
+    });
+    el.addEventListener('mousemove', e => {
+      if (!magnetEl) return;
+      const r  = el.getBoundingClientRect();
+      const cx = r.left + r.width  / 2;
+      const cy = r.top  + r.height / 2;
+      const dx = (e.clientX - cx) * 0.30;
+      const dy = (e.clientY - cy) * 0.30;
+      el.style.transform = `translate(${dx}px,${dy}px)`;
+    });
+    el.addEventListener('mouseleave', () => {
+      magnetEl = null;
+      el.style.transform = '';
+      outer.classList.remove('hovering');
+      inner.classList.remove('hovering');
+    });
+  });
+});
+
+document.addEventListener('mousedown', () => outer.classList.add('clicking'));
+document.addEventListener('mouseup',   () => outer.classList.remove('clicking'));
+document.addEventListener('mouseleave',() => { outer.style.opacity='0'; inner.style.opacity='0'; });
+document.addEventListener('mouseenter',() => { outer.style.opacity='1'; inner.style.opacity='1'; });
+
+/* ── Icon parallax ── */
+const card = document.querySelector('.icon-card'), wrap = document.querySelector('.icon-wrap');
+document.addEventListener('mousemove', e => {
+  const dx = (e.clientX - innerWidth/2)  / (innerWidth/2);
+  const dy = (e.clientY - innerHeight/2) / (innerHeight/2);
+  card.style.transform = `perspective(400px) rotateX(${-dy*9}deg) rotateY(${dx*11}deg)`;
+  wrap.style.transform = `translateY(${-dy*5}px) translateX(${dx*3}px)`;
+});
+document.addEventListener('mouseleave', () => {
+  card.style.transform = 'perspective(400px) rotateX(5deg) rotateY(-5deg)';
+  wrap.style.transform = '';
+});
+
+/* ── Particle burst + navigate ── */
+document.getElementById('ctaBtn').addEventListener('click', e => {
+  e.preventDefault();
+  const r = e.currentTarget.getBoundingClientRect();
+  const cx = r.left + r.width/2, cy = r.top + r.height/2;
+  for (let i = 0; i < 14; i++) {
+    const p = document.createElement('div');
+    const a = (i/14)*Math.PI*2, d = 45+Math.random()*50;
+    const s = 3+Math.random()*4, t = 400+Math.random()*300;
+    p.style.cssText = `position:fixed;z-index:9999;border-radius:50%;pointer-events:none;
+      width:${s}px;height:${s}px;left:${cx}px;top:${cy}px;
+      background:rgba(123,92,240,${.4+Math.random()*.5});
+      transition:transform ${t}ms cubic-bezier(.23,1,.32,1),opacity ${t}ms ease;`;
+    document.body.appendChild(p);
+    requestAnimationFrame(() => {
+      p.style.transform = `translate(${Math.cos(a)*d}px,${Math.sin(a)*d}px) scale(0)`;
+      p.style.opacity = '0';
+    });
+    setTimeout(() => p.remove(), t+50);
+  }
+  setTimeout(() => location.href = '/translator', 260);
+});
+</script>
+</body>
+</html>
